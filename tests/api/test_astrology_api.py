@@ -38,6 +38,9 @@ def test_natal_chart_and_interpretation(client, auth):
 
             self.calls += 1
             d = json.loads(payload)
+            assert "birth_date" not in d["facts"]
+            assert "utc" not in d["facts"]
+            assert "chart_id" not in d["facts"]
             if schema == Review:
                 return Review(approved=True, feedback="")
             return Interpretation(

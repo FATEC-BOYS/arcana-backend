@@ -94,7 +94,15 @@ def process_one(provider_factory=OpenAIProvider) -> bool:
             )
             payload = {
                 "question": question,
-                "facts": row.facts,
+                "facts": (
+                    row.facts
+                    if row.kind == "tarot"
+                    else {
+                        "planets": row.facts["chart"]["planets"],
+                        "houses": row.facts["chart"]["houses"],
+                        "aspects": row.facts["chart"]["aspects"],
+                    }
+                ),
                 "fact_ids": fact_ids,
                 "sources": sources,
                 "original_reading": {"summary": row.result["summary"]} if row.result else None,
