@@ -92,6 +92,7 @@ def upgrade():
         if key not in latest or _version_key(version) > _version_key(latest[key]):
             latest[key] = version
     for (source, topic, version), rows in groups.items():
+        rows.sort(key=lambda row: row["id"])  # Stable ordering independent of DB collation.
         licenses = {x["license"] for x in rows}
         if len(licenses) != 1:
             raise RuntimeError(
