@@ -28,6 +28,7 @@ def reading_view(row):
     return {
         "id": row.id,
         "kind": row.kind,
+        "chart_id": row.chart_id,
         "question": row.question,
         "facts": row.facts,
         "status": row.status,
@@ -81,6 +82,7 @@ def create_reading(db: Session, user: User, body: CreateReading, key: str):
         idempotency_key=key,
         request_hash=request_hash,
         kind=body.kind,
+        chart_id=body.chart_id if body.kind == "astrology" else None,
         question=body.question,
         facts=facts,
     )

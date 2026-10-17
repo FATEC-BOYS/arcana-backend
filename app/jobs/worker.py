@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.ai.orchestration.graph import build_reading_graph
 from app.ai.prompts.templates import PROMPT_VERSION
 from app.ai.providers.openai_provider import OpenAIProvider
-from app.db.models import Chunk, Event, GenerationRun, Job, Message, Reading, now
+from app.db.models import Chunk, Event, GenerationRun, Job, KnowledgeDocument, Message, Reading, now
 from app.db.session import get_engine
 from app.rag.retrieval import search
 
@@ -72,7 +72,12 @@ def process_one(provider_factory=OpenAIProvider) -> bool:
                 fact_ids = list(planets)
             embedded = db.scalar(
                 select(Chunk.id)
-                .where(Chunk.topic == row.kind, Chunk.embedding.is_not(None))
+                .join(KnowledgeDocument)
+                .where(
+                    KnowledgeDocument.topic == row.kind,
+                    KnowledgeDocument.active.is_(True),
+                    Chunk.embedding.is_not(None),
+                )
                 .limit(1)
             )
             vector = (

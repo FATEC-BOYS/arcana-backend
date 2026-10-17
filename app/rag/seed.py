@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Chunk
 from app.modules.cards.catalog import CARDS
+from app.rag.documents import get_or_create_document
 
 SIGNS = {
     "Ari": "iniciativa e afirmação",
@@ -66,14 +67,25 @@ def seed_knowledge(db: Session):
         )
         for i in range(1, 13)
     ]
-    for entry in entries:
-        if db.get(Chunk, entry["id"]) is None:
-            db.add(
-                Chunk(
-                    **entry,
-                    source="Arcana: acervo introdutório autoral",
-                    version="1",
-                    license="AGPL-3.0-or-later",
+    for topic in ("tarot", "astrology"):
+        grouped = sorted((x for x in entries if x["topic"] == topic), key=lambda x: x["id"])
+        document, created = get_or_create_document(
+            db,
+            source="Arcana: acervo introdutório autoral",
+            topic=topic,
+            version="1",
+            license="AGPL-3.0-or-later",
+            entries=grouped,
+        )
+        if created:
+            for index, entry in enumerate(grouped):
+                db.add(
+                    Chunk(
+                        id=entry["id"],
+                        document_id=document.id,
+                        chunk_index=index,
+                        tags=entry["tags"],
+                        content=entry["content"],
+                    )
                 )
-            )
     db.commit()

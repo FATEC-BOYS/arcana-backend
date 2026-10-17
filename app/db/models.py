@@ -2,8 +2,20 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Boolean, Float, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Float,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -62,10 +74,19 @@ class RateBucket(Base):
 
 class Reading(Base):
     __tablename__ = "readings"
-    __table_args__ = (UniqueConstraint("user_id", "idempotency_key"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key"),
+        ForeignKeyConstraint(
+            ["chart_id", "user_id"],
+            ["birth_charts.id", "birth_charts.user_id"],
+            name="fk_reading_chart_owner",
+            ondelete="CASCADE",
+        ),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     idempotency_key: Mapped[str] = mapped_column(String(128))
+    chart_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     request_hash: Mapped[str] = mapped_column(String(64))
     kind: Mapped[str] = mapped_column(String(20))
     question: Mapped[str] = mapped_column(Text)
@@ -78,6 +99,7 @@ class Reading(Base):
 
 class BirthChart(Base):
     __tablename__ = "birth_charts"
+    __table_args__ = (UniqueConstraint("id", "user_id", name="uq_birth_chart_owner"),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     birth_input: Mapped[dict] = mapped_column(JSON)
@@ -137,16 +159,42 @@ class Event(Base):
     created_at: Mapped[int] = mapped_column(default=now)
 
 
-class Chunk(Base):
-    __tablename__ = "knowledge_chunks"
-    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+class KnowledgeDocument(Base):
+    __tablename__ = "knowledge_documents"
+    __table_args__ = (
+        UniqueConstraint("source_key", "version", name="uq_document_source_version"),
+        Index(
+            "uq_document_active_source",
+            "source_key",
+            unique=True,
+            postgresql_where=text("active = true"),
+            sqlite_where=text("active = 1"),
+        ),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    source_key: Mapped[str] = mapped_column(String(64), index=True)
     source: Mapped[str] = mapped_column(Text)
     version: Mapped[str] = mapped_column(String(30))
     license: Mapped[str] = mapped_column(String(80))
     topic: Mapped[str] = mapped_column(String(20), index=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[int] = mapped_column(default=now)
+    chunks: Mapped[list["Chunk"]] = relationship(back_populates="document", passive_deletes=True)
+
+
+class Chunk(Base):
+    __tablename__ = "knowledge_chunks"
+    __table_args__ = (UniqueConstraint("document_id", "chunk_index", name="uq_document_chunk"),)
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    document_id: Mapped[str] = mapped_column(
+        ForeignKey("knowledge_documents.id", ondelete="CASCADE"), index=True
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer)
     tags: Mapped[list] = mapped_column(JSON)
     content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list | None] = mapped_column(Vector(1536), nullable=True)
+    document: Mapped["KnowledgeDocument"] = relationship(back_populates="chunks")
 
 
 class GenerationRun(Base):

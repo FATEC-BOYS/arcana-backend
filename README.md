@@ -15,6 +15,7 @@ Licença: AGPL-3.0-or-later; consulte LICENSE e NOTICE.md.
 - Interpretação e revisão com LangGraph, até uma correção, JSON estruturado e citações verificadas.
 - Fila durável em PostgreSQL com lease, retomada e bloqueio de resultados de workers antigos.
 - Chat contextual, fontes, diário/favoritos, SSE retomável, limites por usuário.
+- Documentos versionados e trechos de RAG com FK, licença e versão ativa única.
 - Acervo introdutório original, ingestão CLI e embeddings opcionais em pgvector.
 - Histórico técnico de modelo/prompt, tokens, chamadas e duração, sem conteúdo nos logs.
 
@@ -79,3 +80,10 @@ python -m pytest -q
 Testes de modelo usam doubles explícitos, sem gasto e sem testar a qualidade de um modelo real.
 Os testes astrológicos calculam posições reais. CI também aplica migrações e testa PostgreSQL.
 Leia docs/architecture.md, docs/api-contract.md e docs/roadmap.md antes de publicar.
+
+## Evolução do banco
+
+A migração 0003 liga leituras aos mapas do mesmo usuário e normaliza documentos do RAG.
+Em instalações existentes: `python -m scripts.bootstrap` aplica migrações e seed idempotente.
+Preserva snapshots, IDs de trechos e embeddings. Faça backup antes de atualizar um banco com dados.
+O backfill exige conexão online; fontes com versões precisam seguir a política em docs/architecture.md.

@@ -28,6 +28,7 @@ def test_natal_chart_and_interpretation(client, auth):
         },
     )
     assert created.status_code == 202, created.text
+    assert created.json()["chart_id"] == chart["id"]
 
     class Provider:
         model = "test"

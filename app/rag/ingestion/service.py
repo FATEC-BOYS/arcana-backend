@@ -1,9 +1,8 @@
-import hashlib
-
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db.models import Chunk
+from app.rag.documents import get_or_create_document
 
 
 class DocumentInput(BaseModel):
@@ -16,19 +15,23 @@ class DocumentInput(BaseModel):
 
 
 def ingest(db: Session, body: DocumentInput) -> int:
-    # CLI-only ingestion: callers cannot upload instructions into another user's RAG corpus.
-    identity = hashlib.sha256((body.source + body.version + body.text).encode()).hexdigest()[:24]
     chunks = [body.text[i : i + 1200] for i in range(0, len(body.text), 1000)]
-    for index, text in enumerate(chunks):
-        key = f"doc:{identity}:{index}"
-        if db.get(Chunk, key) is None:
+    entries = [{"content": text, "tags": body.tags} for text in chunks]
+    document, created = get_or_create_document(
+        db,
+        source=body.source,
+        version=body.version,
+        license=body.license,
+        topic=body.topic,
+        entries=entries,
+    )
+    if created:
+        for index, text in enumerate(chunks):
             db.add(
                 Chunk(
-                    id=key,
-                    source=body.source,
-                    version=body.version,
-                    license=body.license,
-                    topic=body.topic,
+                    id=f"doc:{document.id}:{index}",
+                    document_id=document.id,
+                    chunk_index=index,
                     tags=body.tags,
                     content=text,
                 )

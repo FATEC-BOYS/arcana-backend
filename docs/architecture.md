@@ -5,8 +5,8 @@ Monólito modular com API, worker de geração e worker SMTP opcional em process
 
 ## Dados e cálculos
 
-13 tabelas: users, auth_sessions, reset_tokens, mail_outbox, rate_buckets, readings,
-birth_charts, messages, journal_entries, jobs, reading_events, knowledge_chunks, generation_runs.
+14 tabelas: users, auth_sessions, reset_tokens, mail_outbox, rate_buckets, readings,
+birth_charts, messages, journal_entries, jobs, reading_events, knowledge_documents, knowledge_chunks, generation_runs.
 Chaves estrangeiras em cascata removem o conteúdo pessoal ao excluir a conta.
 O acervo global é independente. Cálculos natais são snapshots, identificados por versão.
 
@@ -49,3 +49,23 @@ Recuperação usa outbox com conteúdo privado temporário, apagado no envio ou 
 É necessária retenção operacional, TLS, backups, configuração de segredos e revisão de
 segurança antes de uso público. Custo monetário não é calculado automaticamente: registramos
 tokens/modelo; preços variam. Configure orçamento também no provedor.
+
+## Integridade e documentos (migração 0003)
+
+Reading.chart_id tem FK composta com user_id para o mapa do mesmo proprietário.
+Snapshots JSON são mantidos. Mapas removidos em cascata removem suas leituras vinculadas;
+não há endpoint público de exclusão isolada de mapa nesta versão.
+A migração preenche chart_id apenas quando o mapa existe e tem o proprietário correto.
+Snapshots legados sem mapa continuam consultáveis, com chart_id nulo.
+
+KnowledgeDocument agrupa source, topic, version, license, content_hash e active.
+Chunk referencia o documento e possui posição única nele; embeddings existentes são mantidos.
+Uma versão é imutável. Nova versão desativa as anteriores na busca; não apaga trechos antigos.
+O índice parcial garante uma única versão ativa por fonte/tópico. A recuperação expõe
+document_id, versão e licença junto da fonte. Resultados históricos guardam texto e referências.
+
+A migração 0003 deve executar online: agrupa trechos legados por fonte/tópico/versão,
+preserva seus IDs e vetores e escolhe a maior versão por ordenação natural como ativa.
+Fontes com licenças conflitantes na mesma versão exigem correção prévia: não são mescladas
+silenciosamente. Imports legados que perderam ordem de documento podem exigir nova versão
+ao reimportar. Downgrade restaura metadados nos chunks; o conceito de versão ativa deixa de existir.

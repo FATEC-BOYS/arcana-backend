@@ -31,6 +31,7 @@ Tarot: {"kind":"tarot","question":"Como refletir sobre trabalho?","spread":"thre
 birth_time, latitude, longitude, timezone (IANA) e fold opcional.
 
 POST messages exige Idempotency-Key próprio e {"question":"..."}. Uma geração ativa por leitura.
+GET/POST de leitura também retornam chart_id (nulo para tarot).
 Estados: pending, processing, completed, failed. Resultado inclui summary, reflections,
 source_ids, fact_ids, sources, prompt_version, retrieval_mode e reviewed.
 

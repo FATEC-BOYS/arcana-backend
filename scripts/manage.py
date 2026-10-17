@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai.providers.openai_provider import OpenAIProvider
-from app.db.models import Chunk
+from app.db.models import Chunk, KnowledgeDocument
 from app.db.session import get_engine
 from app.rag.ingestion.service import DocumentInput, ingest
 from app.rag.seed import seed_knowledge
@@ -31,7 +31,13 @@ def main():
             )
         else:
             provider = OpenAIProvider()
-            rows = list(db.scalars(select(Chunk).where(Chunk.embedding.is_(None))))
+            rows = list(
+                db.scalars(
+                    select(Chunk)
+                    .join(KnowledgeDocument)
+                    .where(KnowledgeDocument.active.is_(True), Chunk.embedding.is_(None))
+                )
+            )
             for row in rows:
                 row.embedding = provider.embed(row.content)
                 db.commit()
