@@ -23,4 +23,11 @@ class CreateReading(BaseModel):
 
 
 class MessageInput(BaseModel):
-    question: str = Field(min_length=5, max_length=2000, pattern=r".*\S.*")
+    question: str = Field(min_length=5, max_length=2000)
+
+    @model_validator(mode="after")
+    def trim_question(self):
+        self.question = self.question.strip()
+        if len(self.question) < 5:
+            raise ValueError("Question must have at least 5 non-padding characters")
+        return self

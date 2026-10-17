@@ -30,6 +30,9 @@ jobs:
       - run: python -m scripts.bootstrap
         env:
           DATABASE_URL: postgresql+psycopg://arcana:arcana@localhost:5432/arcana_test
+      - run: python -m scripts.evaluate
+        env:
+          DATABASE_URL: postgresql+psycopg://arcana:arcana@localhost:5432/arcana_test
       - run: python -m pytest -q
         env:
           TEST_DATABASE_URL: postgresql+psycopg://arcana:arcana@localhost:5432/arcana_test

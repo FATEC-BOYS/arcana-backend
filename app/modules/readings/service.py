@@ -1,14 +1,13 @@
 import hashlib
-import json
 from dataclasses import asdict
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
-from app.db.models import BirthChart, Event, Job, Reading, User, now
+from app.core.usage import reserve_usage
+from app.db.models import BirthChart, Event, Job, Reading, User
 from app.modules.cards.catalog import CARD_BY_ID, CARDS
 from app.modules.cards.service import draw_cards
 from app.modules.readings.schemas import CreateReading
@@ -49,13 +48,7 @@ def create_reading(db: Session, user: User, body: CreateReading, key: str):
         if existing.request_hash != request_hash:
             raise HTTPException(409, "Idempotency key already used for a different request")
         return existing
-    count = db.scalar(
-        select(func.count())
-        .select_from(Reading)
-        .where(Reading.user_id == user.id, Reading.created_at >= now() - 86400)
-    )
-    if count >= get_settings().daily_reading_limit:
-        raise HTTPException(429, "Daily reading limit reached")
+    reserve_usage(db, user.id, "reading")
     if body.kind == "tarot":
         positions = (
             ["Reflexão do dia"]
@@ -76,7 +69,7 @@ def create_reading(db: Session, user: User, body: CreateReading, key: str):
         )
         if not chart:
             raise HTTPException(404, "Chart not found")
-        facts = {"chart_id": chart.id, "chart": chart.data}
+        facts = {"chart_id": chart.id, "chart": {k: v for k, v in chart.data.items() if k != "svg"}}
     row = Reading(
         user_id=user.id,
         idempotency_key=key,
@@ -100,8 +93,3 @@ def create_reading(db: Session, user: User, body: CreateReading, key: str):
         if not row or row.request_hash != request_hash:
             raise HTTPException(409, "Concurrent request conflict") from None
     return row
-
-
-def context_facts(row: Reading) -> str:
-    # Birth coordinates, names and dates are deliberately not sent to the LLM.
-    return json.dumps(row.facts, ensure_ascii=False)

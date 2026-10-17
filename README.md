@@ -4,6 +4,8 @@ API Python para tarot e astrologia natal com persistência, RAG e agentes.
 Frontend: https://github.com/FATEC-BOYS/arcana-frontend
 Licença: AGPL-3.0-or-later; consulte LICENSE e NOTICE.md.
 
+Versão 0.3.0 — escopo V1 implementado; homologação externa depende da configuração abaixo.
+
 ## Implementado
 
 - Cadastro/login, tokens opacos, refresh rotativo, logout global, perfil e exclusão em cascata.
@@ -11,7 +13,7 @@ Licença: AGPL-3.0-or-later; consulte LICENSE e NOTICE.md.
 - Catálogo autoral de 78 cartas e sorteio sem repetição com inversões opcionais.
 - Tiragens persistidas e idempotentes: carta diária ou três cartas.
 - Mapas natais calculados offline com Kerykeion 6.0.4 + Swiss Ephemeris.
-- Validação de fuso IANA, horários inexistentes/ambíguos e coordenadas.
+- Validação de fuso IANA, horários inexistentes/ambíguos e coordenadas; SVG e horário desconhecido.
 - Interpretação e revisão com LangGraph, até uma correção, JSON estruturado e citações verificadas.
 - Fila durável em PostgreSQL com lease, retomada e bloqueio de resultados de workers antigos.
 - Chat contextual, fontes, diário/favoritos, SSE retomável, limites por usuário.
@@ -84,6 +86,30 @@ Leia docs/architecture.md, docs/api-contract.md e docs/roadmap.md antes de publi
 ## Evolução do banco
 
 A migração 0003 liga leituras aos mapas do mesmo usuário e normaliza documentos do RAG.
+A 0004 acrescenta cotas persistentes, sequência de mensagens, retomada de jobs e proveniência dos vetores.
 Em instalações existentes: `python -m scripts.bootstrap` aplica migrações e seed idempotente.
 Preserva snapshots, IDs de trechos e embeddings. Faça backup antes de atualizar um banco com dados.
 O backfill exige conexão online; fontes com versões precisam seguir a política em docs/architecture.md.
+
+## Operação da V1
+
+Consulte [deploy.md](docs/deploy.md) para configurar API, worker, banco e SMTP.
+`GET /capabilities` informa recursos configurados, sem expor segredos; `GET /me/usage`
+informa cotas por dia UTC. Excluir uma leitura não devolve cota. Retentativas manuais
+consomem cota; retentativas automáticas respeitam MAX_JOB_ATTEMPTS e usam backoff.
+
+```bash
+python -m scripts.doctor
+python -m scripts.evaluate
+python -m scripts.maintenance
+# Aplica a limpeza, após revisar o dry run:
+python -m scripts.maintenance --apply
+python -m scripts.openapi
+```
+
+Doctor não chama o provedor: configuração presente não comprova credencial válida.
+Evaluate padrão verifica recuperação em três casos sintéticos; `--live` faz chamadas pagas
+explicitamente e ainda exige revisão humana. Contratos HTTP do SDK usam transporte mockado nos testes.
+Embeddings antigos sem identificação do modelo são preservados e ignorados na similaridade;
+execute `scripts.manage embed` para reindexar com o modelo configurado. O seed v2 contém
+215 trechos introdutórios autorais, mantendo referências das versões anteriores.

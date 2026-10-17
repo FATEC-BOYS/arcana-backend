@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 class BirthInput(BaseModel):
     birth_date: date
-    birth_time: time
+    birth_time: time | None = None
     latitude: float = Field(ge=-66, le=66, allow_inf_nan=False)
     longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
     timezone: str = Field(max_length=80)
@@ -23,6 +23,8 @@ class BirthInput(BaseModel):
     @field_validator("birth_time")
     @classmethod
     def local_time(cls, value):
+        if value is None:
+            return value
         if value.tzinfo is not None or value.second or value.microsecond:
             raise ValueError("Use a local time with minute precision, e.g. 14:30")
         return value
@@ -38,7 +40,7 @@ class BirthInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_wall_time(self):
-        naive = datetime.combine(self.birth_date, self.birth_time)
+        naive = datetime.combine(self.birth_date, self.birth_time or time(12, 0))
         zone = ZoneInfo(self.timezone)
         variants = [naive.replace(tzinfo=zone, fold=i) for i in (0, 1)]
         valid = [

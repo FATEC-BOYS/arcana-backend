@@ -10,8 +10,12 @@
 - [ ] Validar chamadas reais com chave do provedor (não fornecida)
 - [ ] Curadoria aprofundada do acervo; conteúdo atual é introdutório
 - [ ] Avaliação humana e benchmark com modelos reais
-- [ ] SVG do mapa, geocodificação assistida e horário desconhecido
-- [ ] Deploy público, revisão operacional e política de retenção
+- [x] SVG do mapa e horário desconhecido com limitações explícitas
+- [x] Cotas duráveis, retry de mensagens e proveniência de embeddings
+- [x] Diagnóstico, limpeza operacional, OpenAPI exportado e avaliação sintética
+- [ ] Geocodificação assistida
+- [x] Política de retenção operacional documentada e comando de limpeza
+- [ ] Deploy público e validação da configuração operacional
 
 Sinastria, trânsitos, voz, cobrança e baralhos ilustrados não entram nesta entrega.
 Backend funcional não equivale a operação pública já homologada.

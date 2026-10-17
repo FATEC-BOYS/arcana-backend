@@ -6,6 +6,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.schemas import TokenOut
 from app.core.config import get_settings
 from app.core.security import (
     DUMMY_HASH,
@@ -50,7 +51,7 @@ class UserOut(BaseModel):
     name: str
 
 
-@router.post("/register", status_code=201)
+@router.post("/register", status_code=201, response_model=TokenOut)
 def register(body: Register, db: Session = Depends(get_session)):
     user = User(
         email=str(body.email).lower(),
@@ -66,7 +67,7 @@ def register(body: Register, db: Session = Depends(get_session)):
     return issue_session(db, user.id)
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenOut)
 def login(body: Login, db: Session = Depends(get_session)):
     user = db.scalar(select(User).where(User.email == str(body.email).lower()))
     if not passwords.verify(body.password, user.password_hash if user else DUMMY_HASH) or not user:
@@ -74,7 +75,7 @@ def login(body: Login, db: Session = Depends(get_session)):
     return issue_session(db, user.id)
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=TokenOut)
 def refresh(body: Refresh, db: Session = Depends(get_session)):
     row = db.scalar(
         select(AuthSession)

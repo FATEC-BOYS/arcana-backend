@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.schemas import JournalOut
 from app.core.security import require_user
 from app.db.models import JournalEntry, User, now
 from app.db.session import get_session
@@ -26,7 +27,7 @@ def view(row):
     }
 
 
-@router.put("/{reading_id}")
+@router.put("/{reading_id}", response_model=JournalOut)
 def save(
     reading_id: str,
     body: JournalInput,
@@ -43,7 +44,7 @@ def save(
     return view(row)
 
 
-@router.get("")
+@router.get("", response_model=list[JournalOut])
 def entries(
     user: User = Depends(require_user),
     db: Session = Depends(get_session),
@@ -62,3 +63,25 @@ def entries(
             .limit(limit)
         )
     ]
+
+
+@router.get("/{reading_id}", response_model=JournalOut)
+def entry(reading_id: str, user: User = Depends(require_user), db: Session = Depends(get_session)):
+    owned_reading(db, reading_id, user.id)
+    row = db.scalar(select(JournalEntry).where(JournalEntry.reading_id == reading_id))
+    if not row:
+        raise HTTPException(404, "Journal entry not found")
+    return view(row)
+
+
+@router.delete("/{reading_id}", status_code=204)
+def delete_entry(
+    reading_id: str, user: User = Depends(require_user), db: Session = Depends(get_session)
+):
+    owned_reading(db, reading_id, user.id, lock=True)
+    row = db.scalar(select(JournalEntry).where(JournalEntry.reading_id == reading_id))
+    if not row:
+        raise HTTPException(404, "Journal entry not found")
+    db.delete(row)
+    db.commit()
+    return Response(status_code=204)

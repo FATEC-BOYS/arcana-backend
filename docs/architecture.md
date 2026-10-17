@@ -5,14 +5,16 @@ Monólito modular com API, worker de geração e worker SMTP opcional em process
 
 ## Dados e cálculos
 
-14 tabelas: users, auth_sessions, reset_tokens, mail_outbox, rate_buckets, readings,
-birth_charts, messages, journal_entries, jobs, reading_events, knowledge_documents, knowledge_chunks, generation_runs.
+15 tabelas: users, auth_sessions, reset_tokens, mail_outbox, rate_buckets, readings,
+birth_charts, messages, journal_entries, jobs, reading_events, knowledge_documents, knowledge_chunks, generation_runs, usage_buckets.
 Chaves estrangeiras em cascata removem o conteúdo pessoal ao excluir a conta.
 O acervo global é independente. Cálculos natais são snapshots, identificados por versão.
 
 Data/hora local é convertida por zoneinfo para UTC antes de chamar Kerykeion (online=False).
 Sistema tropical, Placidus, latitude entre -66 e 66 graus, datas de 1900 até hoje.
-Horário é obrigatório; não há retificação, geocodificação nem inferência do fuso por coordenada.
+Horário desconhecido usa meio-dia local apenas para posições aproximadas: sem casas, ascendente,
+aspectos ou SVG. A incerteza acompanha o resultado e o contexto dos agentes. Não há retificação,
+geocodificação nem inferência do fuso por coordenada.
 O cliente deve fornecer coordenadas e fuso coerentes. fold resolve repetições de horário.
 Swiss Ephemeris é serializado por lock no processo devido a estado global. A distribuição
 não inclui arquivos externos de efemérides; backend usa fallback analítico Moshier disponível
@@ -42,7 +44,8 @@ Eventos persistidos são de estado, sem raciocínio interno. Resultado é consul
 
 Tokens opacos de alta entropia, somente hashes no banco; senhas Argon2. Autorização por
 proprietário em cada recurso. Rate limit de autenticação por IP com hash HMAC. Limites de
-leituras/24h, mapas/24h e mensagens/tiragem. Configure proxy confiável explicitamente.
+leituras, mapas e mensagens por dia UTC; mensagens também têm limite por tiragem.
+Cotas persistem após exclusão de recursos e são reservadas sob lock por usuário. Configure proxy confiável explicitamente.
 Cache-Control no-store e validações sem eco de valores de senha/dados privados.
 Sem logs de acesso no comando Docker; não adicionar prompts/diário aos logs.
 Recuperação usa outbox com conteúdo privado temporário, apagado no envio ou expiração.
@@ -53,8 +56,8 @@ tokens/modelo; preços variam. Configure orçamento também no provedor.
 ## Integridade e documentos (migração 0003)
 
 Reading.chart_id tem FK composta com user_id para o mapa do mesmo proprietário.
-Snapshots JSON são mantidos. Mapas removidos em cascata removem suas leituras vinculadas;
-não há endpoint público de exclusão isolada de mapa nesta versão.
+Snapshots JSON são mantidos. O endpoint de exclusão de mapa rejeita mapas ainda vinculados a leituras (409).
+Excluir a conta remove todos os dados pessoais em cascata.
 A migração preenche chart_id apenas quando o mapa existe e tem o proprietário correto.
 Snapshots legados sem mapa continuam consultáveis, com chart_id nulo.
 
@@ -69,3 +72,18 @@ preserva seus IDs e vetores e escolhe a maior versão por ordenação natural co
 Fontes com licenças conflitantes na mesma versão exigem correção prévia: não são mescladas
 silenciosamente. Imports legados que perderam ordem de documento podem exigir nova versão
 ao reimportar. Downgrade restaura metadados nos chunks; o conceito de versão ativa deixa de existir.
+
+## Operação e migração 0004
+
+Mensagens possuem sequência única por leitura e retry individual. Jobs temporariamente
+indisponíveis voltam à fila com available_at/backoff; erros de autenticação/configuração
+falham explicitamente. GenerationRun relaciona leitura e mensagem, estado/erro, modelo,
+versão de prompt, modo de recuperação, tokens de chat e embeddings separadamente.
+A migração ordena mensagens legadas por created_at/id e preenche cotas pelo dia original.
+Vetores legados não recebem modelo presumido: somente vetores do modelo configurado
+participam da busca semântica; o restante continua disponível por metadados.
+
+A limpeza operacional é manual/agendável via scripts.maintenance: sessões/reset tokens
+expirados, outbox antiga, rate buckets antigos, cotas com mais de 90 dias e eventos com
+mais de 30 dias. Leituras, mensagens, mapas, execuções e diário permanecem até exclusão
+pelo proprietário. SSE não promete replay além da retenção; GET é a fonte do resultado.

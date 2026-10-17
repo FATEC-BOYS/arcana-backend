@@ -32,6 +32,30 @@ PLANET_THEMES = {
 }
 
 
+HOUSE_THEMES = {
+    1: "apresentação de si e modo de iniciar experiências",
+    2: "recursos pessoais, sustento e percepção de valor",
+    3: "comunicação, aprendizado cotidiano e ambiente próximo",
+    4: "raízes, intimidade, moradia e sensação de pertencimento",
+    5: "expressão criativa, prazer e espaço para brincar",
+    6: "rotina, trabalho cotidiano e cuidado prático, sem diagnóstico de saúde",
+    7: "parcerias, acordos e relações de reciprocidade",
+    8: "recursos compartilhados, intimidade e transformações simbólicas",
+    9: "estudos amplos, exploração e construção de sentido",
+    10: "papel público, carreira e responsabilidades reconhecidas",
+    11: "amizades, grupos e projetos coletivos",
+    12: "recolhimento, elaboração interna e o que pede tempo para ser compreendido",
+}
+ASPECT_THEMES = {
+    "conjunction": "aproximação e combinação de temas; pode trazer foco ou intensificação",
+    "opposition": "polaridades que convidam a negociação e reconhecimento de perspectivas",
+    "square": "tensão que pode revelar conflitos de necessidades e pedir ajustes",
+    "trine": "fluidez entre temas, que ainda depende de escolhas e prática",
+    "sextile": "possibilidade de cooperação que pode ser cultivada ativamente",
+}
+SEED_VERSION = "2"
+
+
 def seed_knowledge(db: Session):
     entries = [
         dict(
@@ -62,10 +86,20 @@ def seed_knowledge(db: Session):
             id=f"house:{i}",
             topic="astrology",
             tags=[f"house-{i}"],
-            content=f"A casa {i} é uma posição calculada a partir do horário e local. "
+            content=f"Na interpretação simbólica, a casa {i} se relaciona a {HOUSE_THEMES[i]}. "
             "Sem horário confiável, não afirmar precisão de casas ou ascendente.",
         )
         for i in range(1, 13)
+    ]
+    entries += [
+        dict(
+            id="aspect:" + aspect,
+            topic="astrology",
+            tags=["aspect-" + aspect],
+            content=f"O aspecto {aspect} é interpretado simbolicamente como {theme}. "
+            "Não determina acontecimentos nem substitui contexto individual.",
+        )
+        for aspect, theme in ASPECT_THEMES.items()
     ]
     for topic in ("tarot", "astrology"):
         grouped = sorted((x for x in entries if x["topic"] == topic), key=lambda x: x["id"])
@@ -73,7 +107,7 @@ def seed_knowledge(db: Session):
             db,
             source="Arcana: acervo introdutório autoral",
             topic=topic,
-            version="1",
+            version=SEED_VERSION,
             license="AGPL-3.0-or-later",
             entries=grouped,
         )
@@ -81,7 +115,7 @@ def seed_knowledge(db: Session):
             for index, entry in enumerate(grouped):
                 db.add(
                     Chunk(
-                        id=entry["id"],
+                        id=f"seed-v{SEED_VERSION}:" + entry["id"],
                         document_id=document.id,
                         chunk_index=index,
                         tags=entry["tags"],

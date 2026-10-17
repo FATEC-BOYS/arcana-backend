@@ -33,7 +33,7 @@ def test_real_calculation_and_utc_equivalence():
     [
         {"timezone": "not/a/zone"},
         {"latitude": 89},
-        {"birth_time": None},
+        {"birth_time": "10:30:01"},
         {"birth_date": "2024-03-10", "birth_time": "02:30", "timezone": "America/New_York"},
         {"birth_date": "2024-11-03", "birth_time": "01:30", "timezone": "America/New_York"},
     ],

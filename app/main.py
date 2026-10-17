@@ -9,7 +9,7 @@ from app.core.config import get_settings
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    application = FastAPI(title=settings.app_name, version="0.2.0")
+    application = FastAPI(title=settings.app_name, version="0.3.0")
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

@@ -35,11 +35,17 @@ def main():
                 db.scalars(
                     select(Chunk)
                     .join(KnowledgeDocument)
-                    .where(KnowledgeDocument.active.is_(True), Chunk.embedding.is_(None))
+                    .where(
+                        KnowledgeDocument.active.is_(True),
+                        (Chunk.embedding.is_(None))
+                        | (Chunk.embedding_model.is_(None))
+                        | (Chunk.embedding_model != provider.embedding_model),
+                    )
                 )
             )
             for row in rows:
                 row.embedding = provider.embed(row.content)
+                row.embedding_model = provider.embedding_model
                 db.commit()
             print("Embedded chunks:", len(rows))
 

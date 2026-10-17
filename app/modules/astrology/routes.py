@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import require_user
-from app.db.models import BirthChart, User, now
+from app.core.usage import reserve_usage
+from app.db.models import BirthChart, Reading, User
 from app.db.session import get_session
 from app.modules.astrology.schemas import BirthInput
 from app.modules.astrology.service import calculate_natal
@@ -15,14 +16,7 @@ router = APIRouter()
 def create_chart(
     body: BirthInput, user: User = Depends(require_user), db: Session = Depends(get_session)
 ):
-    db.scalar(select(User).where(User.id == user.id).with_for_update())
-    count = db.scalar(
-        select(func.count())
-        .select_from(BirthChart)
-        .where(BirthChart.user_id == user.id, BirthChart.created_at >= now() - 86400)
-    )
-    if count >= 30:
-        raise HTTPException(429, "Daily chart limit reached")
+    reserve_usage(db, user.id, "chart")
     try:
         data = calculate_natal(body)
     except (ValueError, ArithmeticError):
@@ -63,3 +57,47 @@ def chart(chart_id: str, user: User = Depends(require_user), db: Session = Depen
         "data": row.data,
         "birth_input": row.birth_input,
     }
+
+
+@router.get(
+    "/charts/{chart_id}/svg",
+    response_class=Response,
+    responses={200: {"content": {"image/svg+xml": {}}}},
+)
+def chart_svg(
+    chart_id: str, user: User = Depends(require_user), db: Session = Depends(get_session)
+):
+    row = db.scalar(
+        select(BirthChart).where(BirthChart.id == chart_id, BirthChart.user_id == user.id)
+    )
+    if not row:
+        raise HTTPException(404, "Chart not found")
+    if not row.data.get("svg"):
+        raise HTTPException(
+            409, "SVG unavailable for this chart; create a chart with a known birth time"
+        )
+    return Response(
+        row.data["svg"],
+        media_type="image/svg+xml",
+        headers={
+            "Content-Disposition": 'inline; filename="arcana-natal.svg"',
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+        },
+    )
+
+
+@router.delete("/charts/{chart_id}", status_code=204)
+def delete_chart(
+    chart_id: str, user: User = Depends(require_user), db: Session = Depends(get_session)
+):
+    db.scalar(select(User).where(User.id == user.id).with_for_update())
+    row = db.scalar(
+        select(BirthChart).where(BirthChart.id == chart_id, BirthChart.user_id == user.id)
+    )
+    if not row:
+        raise HTTPException(404, "Chart not found")
+    if db.scalar(select(Reading.id).where(Reading.chart_id == row.id).limit(1)):
+        raise HTTPException(409, "Delete associated readings before deleting this chart")
+    db.delete(row)
+    db.commit()
+    return Response(status_code=204)

@@ -7,7 +7,7 @@ from sqlalchemy import MetaData, Table, select
 from sqlalchemy.orm import Session
 
 from app.db.base import Base
-from app.db.models import BirthChart, Chunk, KnowledgeDocument, Reading
+from app.db.models import BirthChart, Chunk, KnowledgeDocument, Reading, UsageBucket
 from app.db.session import get_engine
 
 
@@ -85,6 +85,9 @@ def test_upgrade_and_downgrade_preserve_legacy_data(client):
         assert db.get(Chunk, "old-2").document.active
         assert not db.get(Chunk, "old-1").document.active
         assert db.get(Chunk, "old-1").embedding[0] == 1.0
+        assert db.get(Chunk, "old-1").embedding_model is None
+        assert db.get(UsageBucket, ("legacy-user", 0, "reading")).count == 1
+        assert db.get(UsageBucket, ("legacy-user", 0, "chart")).count == 1
     command.downgrade(config, "0002_domain")
     legacy_chunks = Table("knowledge_chunks", MetaData(), autoload_with=engine)
     with engine.connect() as connection:

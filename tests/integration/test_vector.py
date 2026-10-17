@@ -12,8 +12,15 @@ def test_postgres_semantic_retrieval(client):
         pytest.skip("PostgreSQL vector distance required")
     vector = [1.0] + [0.0] * 1535
     with Session(get_engine()) as db:
-        chunk = db.scalar(select(Chunk).where(Chunk.id == "tarot:major-00"))
+        chunk = db.scalar(select(Chunk).where(Chunk.id == "seed-v2:tarot:major-00"))
         chunk.embedding = vector
+        chunk.embedding_model = "text-embedding-3-small"
         db.commit()
-        evidence = search(db, topic="tarot", tags=["major-00"], vector=vector)
-        assert evidence[0].source_id == "tarot:major-00"
+        evidence = search(
+            db,
+            topic="tarot",
+            tags=["major-00"],
+            vector=vector,
+            embedding_model="text-embedding-3-small",
+        )
+        assert evidence[0].source_id == "seed-v2:tarot:major-00"

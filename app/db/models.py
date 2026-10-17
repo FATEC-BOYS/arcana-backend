@@ -109,13 +109,18 @@ class BirthChart(Base):
 
 class Message(Base):
     __tablename__ = "messages"
-    __table_args__ = (UniqueConstraint("reading_id", "idempotency_key"),)
+    __table_args__ = (
+        UniqueConstraint("reading_id", "idempotency_key"),
+        UniqueConstraint("reading_id", "sequence", name="uq_message_sequence"),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     reading_id: Mapped[str] = mapped_column(
         ForeignKey("readings.id", ondelete="CASCADE"), index=True
     )
+    sequence: Mapped[int] = mapped_column(Integer)
     idempotency_key: Mapped[str] = mapped_column(String(128))
     question: Mapped[str] = mapped_column(Text)
+    error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     created_at: Mapped[int] = mapped_column(default=now)
@@ -132,6 +137,16 @@ class JournalEntry(Base):
     updated_at: Mapped[int] = mapped_column(default=now)
 
 
+class UsageBucket(Base):
+    __tablename__ = "usage_buckets"
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    day: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20), primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class Job(Base):
     __tablename__ = "jobs"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
@@ -143,6 +158,8 @@ class Job(Base):
     )
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
     attempts: Mapped[int] = mapped_column(default=0)
+    available_at: Mapped[int] = mapped_column(default=now, index=True)
+    last_error: Mapped[str | None] = mapped_column(String(50), nullable=True)
     lease_until: Mapped[int] = mapped_column(default=0)
     lease_token: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[int] = mapped_column(default=now)
@@ -193,6 +210,7 @@ class Chunk(Base):
     chunk_index: Mapped[int] = mapped_column(Integer)
     tags: Mapped[list] = mapped_column(JSON)
     content: Mapped[str] = mapped_column(Text)
+    embedding_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     embedding: Mapped[list | None] = mapped_column(Vector(1536), nullable=True)
     document: Mapped["KnowledgeDocument"] = relationship(back_populates="chunks")
 
@@ -203,6 +221,14 @@ class GenerationRun(Base):
     reading_id: Mapped[str] = mapped_column(
         ForeignKey("readings.id", ondelete="CASCADE"), index=True
     )
+    message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(20), default="completed")
+    error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    embedding_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    embedding_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    retrieval_mode: Mapped[str] = mapped_column(String(20), default="metadata")
     model: Mapped[str] = mapped_column(String(100))
     prompt_version: Mapped[str] = mapped_column(String(50))
     source_ids: Mapped[list] = mapped_column(JSON)
