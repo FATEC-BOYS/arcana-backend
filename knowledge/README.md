@@ -1,5 +1,5 @@
 # Acervo
 
-Adicionar somente conteúdo próprio, licenciado ou em domínio público verificado.
-Guardar fonte, autoria, licença, versão, tradição, carta, posição e orientação nos metadados.
-Não commitar materiais privados ou embeddings. Acervo e imagens têm licenças independentes.
+Seed autoral introdutório em app/rag/seed.py e catálogo em app/modules/cards/catalog.py.
+Usar scripts.manage para ingestão e embeddings; consultar README principal.
+Somente conteúdo próprio, licenciado ou em domínio público verificado.

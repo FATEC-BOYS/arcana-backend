@@ -1,3 +1,3 @@
-# Implementação pendente
+# Arcana
 
-Limites e responsabilidades descritos em docs/architecture.md e docs/roadmap.md.
+Consulte README.md e docs/architecture.md na raiz para responsabilidades e estado atual.

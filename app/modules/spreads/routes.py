@@ -7,7 +7,8 @@ router = APIRouter()
 def list_spreads() -> list[dict]:
     return [
         {"id": "daily", "positions": ["Reflexão do dia"]},
-        {"id": "three_cards", "positions": [
-            "Situação atual", "O que merece atenção", "Um caminho possível"
-        ]},
+        {
+            "id": "three_cards",
+            "positions": ["Situação atual", "O que merece atenção", "Um caminho possível"],
+        },
     ]

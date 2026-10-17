@@ -1,4 +1,5 @@
 """Enable vector storage; domain tables follow in subsequent migrations."""
+
 from alembic import op
 
 revision = "0001_vector"

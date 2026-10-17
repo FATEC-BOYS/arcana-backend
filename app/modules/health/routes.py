@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+
 from app.db.session import get_engine
 
 router = APIRouter()

@@ -1,12 +1,17 @@
-# Plano de implementação
+# Estado e próximos passos
 
-- [x] Esqueleto executável, configuração, CI e infraestrutura local
-- [ ] Usuários, autenticação, autorização e migrações de domínio
-- [ ] Catálogo licenciado das 78 cartas e tiragens persistidas/idempotentes
-- [ ] Ingestão do acervo, embeddings, busca filtrada e citações
-- [ ] Provedor LLM e fluxo interpretação/revisão com orçamento e timeout
-- [ ] Jobs duráveis, SSE e recuperação após desconexão
-- [ ] Conversa contextual, diário e exclusão dos dados
-- [ ] Avaliações, limites por usuário e documentação de deploy
+- [x] Autenticação, sessões, recuperação opcional e exclusão da conta
+- [x] PostgreSQL, migrações, catálogo autoral e tiragens idempotentes
+- [x] Kerykeion: mapa natal offline e validação de fuso/horário
+- [x] RAG com acervo inicial, ingestão CLI e embeddings opcionais
+- [x] Intérprete/revisor LangGraph, citações e limite de correções
+- [x] Jobs duráveis, SSE, conversa contextual e diário
+- [x] Infraestrutura Docker e testes locais com doubles de IA
+- [ ] Validar chamadas reais com chave do provedor (não fornecida)
+- [ ] Curadoria aprofundada do acervo; conteúdo atual é introdutório
+- [ ] Avaliação humana e benchmark com modelos reais
+- [ ] SVG do mapa, geocodificação assistida e horário desconhecido
+- [ ] Deploy público, revisão operacional e política de retenção
 
-Fora da V1: astrologia, sinastria, voz, cobrança e baralhos personalizados.
+Sinastria, trânsitos, voz, cobrança e baralhos ilustrados não entram nesta entrega.
+Backend funcional não equivale a operação pública já homologada.

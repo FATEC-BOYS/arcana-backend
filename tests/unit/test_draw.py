@@ -1,5 +1,7 @@
 import random
+
 import pytest
+
 from app.modules.cards.service import draw_cards
 from app.rag.citations import validate_citations
 

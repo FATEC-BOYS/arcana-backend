@@ -1,3 +1,3 @@
-# auth
+# Arcana
 
-Módulo reservado. Implementar schemas, modelos, serviço, repositório e rotas conforme docs/roadmap.md.
+Consulte README.md e docs/architecture.md na raiz para responsabilidades e estado atual.

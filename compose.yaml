@@ -1,3 +1,8 @@
+x-app: &app
+  build: .
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://arcana:arcana@db:5432/arcana
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -12,13 +17,30 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-  api:
-    build: .
-    ports: ["127.0.0.1:8000:8000"]
-    environment:
-      DATABASE_URL: postgresql+psycopg://arcana:arcana@db:5432/arcana
+  init:
+    <<: *app
+    command: ["python", "-m", "scripts.bootstrap"]
     depends_on:
       db:
         condition: service_healthy
+  api:
+    <<: *app
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+  worker:
+    <<: *app
+    command: ["python", "-m", "app.jobs.worker"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+  mail-worker:
+    <<: *app
+    command: ["python", "-m", "app.jobs.mail_worker"]
+    profiles: ["mail"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
 volumes:
   postgres_data:
