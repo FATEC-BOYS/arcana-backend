@@ -8,6 +8,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
+from app.ai.evaluation import assess_answer
 from app.ai.orchestration.graph import build_reading_graph
 from app.ai.providers.openai_provider import OpenAIProvider
 from app.db.session import get_engine
@@ -38,7 +39,7 @@ def evaluate(db, *, live=False):
         if live:
             provider = OpenAIProvider()
             try:
-                build_reading_graph(provider).invoke(
+                state = build_reading_graph(provider).invoke(
                     {
                         "payload": {
                             "question": case["question"],
@@ -51,7 +52,16 @@ def evaluate(db, *, live=False):
                         "corrections": -1,
                     }
                 )
-                result["validated_and_reviewed"] = True
+                assessment = assess_answer(
+                    state["answer"],
+                    allowed_source_ids={source.source_id for source in sources},
+                    allowed_fact_ids=set(ids),
+                    card_names=[CARD_BY_ID[card_id]["name"] for card_id in ids],
+                    forbidden_phrases=case.get("forbidden_phrases", []),
+                    reviewer_approved=state["review"]["approved"],
+                )
+                result["quality_checks"] = assessment["checks"]
+                result["validated_and_reviewed"] = assessment["passed"]
             except RuntimeError:
                 result["validated_and_reviewed"] = False
             result["calls"] = provider.calls
@@ -63,14 +73,17 @@ def evaluate(db, *, live=False):
     return {
         "mode": "live" if live else "retrieval_only",
         "cases": results,
-        "note": "Structural/retrieval checks do not measure semantic or scientific correctness.",
+        "note": (
+            "Offline mode checks retrieval only. Live mode adds reviewer approval, "
+            "grounding and narrow text heuristics; human review is still required."
+        ),
     }
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--live", action="store_true", help="Calls configured OpenAI model: up to 12 chat calls"
+        "--live", action="store_true", help="Calls configured OpenAI model: up to 20 chat calls"
     )
     args = parser.parse_args()
     with Session(get_engine()) as db:

@@ -236,4 +236,5 @@ class GenerationRun(Base):
     output_tokens: Mapped[int] = mapped_column(default=0)
     duration_ms: Mapped[float] = mapped_column(Float, default=0)
     calls: Mapped[int] = mapped_column(default=0)
+    trace: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[int] = mapped_column(default=now)

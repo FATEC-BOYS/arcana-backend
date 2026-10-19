@@ -2,6 +2,7 @@ import json
 
 from langgraph.graph import END, START, StateGraph
 
+from app.ai.observability import RunTrace
 from app.ai.prompts.templates import INTERPRETER, REVIEWER
 from app.ai.schemas.state import Interpretation, ReadingState, Review
 from app.rag.citations import validate_citations
@@ -11,8 +12,14 @@ class InvalidGeneration(RuntimeError):
     pass
 
 
-def build_reading_graph(provider):
+def build_reading_graph(provider, *, trace: RunTrace | None = None):
+    tracker = trace if trace is not None else RunTrace()
+
     def interpret(state):
+        with tracker.step("interpret"):
+            return interpret_step(state)
+
+    def interpret_step(state):
         payload = {**state["payload"], "feedback": state.get("review", {}).get("feedback", "")}
         answer = provider.structured(
             system=INTERPRETER, payload=json.dumps(payload), schema=Interpretation
@@ -25,11 +32,16 @@ def build_reading_graph(provider):
         return {"answer": answer, "corrections": state.get("corrections", -1) + 1}
 
     def review(state):
+        with tracker.step("review"):
+            return review_step(state)
+
+    def review_step(state):
         response = provider.structured(
             system=REVIEWER,
             payload=json.dumps({**state["payload"], "answer": state["answer"]}),
             schema=Review,
         )
+        tracker.reviewed(response.approved)
         return {"review": response.model_dump()}
 
     def decision(state):
@@ -38,7 +50,8 @@ def build_reading_graph(provider):
         return "correct" if state["corrections"] < 1 else "reject"
 
     def reject(_):
-        raise InvalidGeneration("review_rejected")
+        with tracker.step("reject"):
+            raise InvalidGeneration("review_rejected")
 
     graph = StateGraph(ReadingState)
     graph.add_node("interpret", interpret)

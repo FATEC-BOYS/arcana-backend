@@ -20,6 +20,8 @@ Versão 0.3.0 — escopo V1 implementado; homologação externa depende da confi
 - Documentos versionados e trechos de RAG com FK, licença e versão ativa única.
 - Acervo introdutório original, ingestão CLI e embeddings opcionais em pgvector.
 - Histórico técnico de modelo/prompt, tokens, chamadas e duração, sem conteúdo nos logs.
+- Telemetria LangGraph por etapa (tempo/status/revisões) e relatório operacional agregado, sem dados pessoais.
+- Testes offline de revisão/correção e rubricagem de cinco casos sintéticos (live opcional).
 
 ## Executar com Docker
 
@@ -87,6 +89,7 @@ Leia docs/architecture.md, docs/api-contract.md e docs/roadmap.md antes de publi
 
 A migração 0003 liga leituras aos mapas do mesmo usuário e normaliza documentos do RAG.
 A 0004 acrescenta cotas persistentes, sequência de mensagens, retomada de jobs e proveniência dos vetores.
+A 0005 acrescenta uma coluna JSON de telemetria na tabela generation_runs (dados legados recebem {}).
 Em instalações existentes: `python -m scripts.bootstrap` aplica migrações e seed idempotente.
 Preserva snapshots, IDs de trechos e embeddings. Faça backup antes de atualizar um banco com dados.
 O backfill exige conexão online; fontes com versões precisam seguir a política em docs/architecture.md.
@@ -101,6 +104,7 @@ consomem cota; retentativas automáticas respeitam MAX_JOB_ATTEMPTS e usam backo
 ```bash
 python -m scripts.doctor
 python -m scripts.evaluate
+python -m scripts.observability --days 7
 python -m scripts.maintenance
 # Aplica a limpeza, após revisar o dry run:
 python -m scripts.maintenance --apply
@@ -108,8 +112,10 @@ python -m scripts.openapi
 ```
 
 Doctor não chama o provedor: configuração presente não comprova credencial válida.
-Evaluate padrão verifica recuperação em três casos sintéticos; `--live` faz chamadas pagas
-explicitamente e ainda exige revisão humana. Contratos HTTP do SDK usam transporte mockado nos testes.
+Evaluate padrão verifica recuperação em cinco casos sintéticos; `--live` faz até 20
+chamadas pagas de chat e aplica heurísticas de qualidade (não substitui revisão humana).
+Observability resume duração p95, taxas de sucesso, tokens, erros e etapas do grafo sem
+identificadores ou conteúdo dos usuários; consulte [evaluations](evaluations/README.md). Contratos HTTP do SDK usam transporte mockado nos testes.
 Embeddings antigos sem identificação do modelo são preservados e ignorados na similaridade;
 execute `scripts.manage embed` para reindexar com o modelo configurado. O seed v2 contém
 215 trechos introdutórios autorais, mantendo referências das versões anteriores.
