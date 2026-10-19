@@ -16,7 +16,7 @@ def build_reading_graph(provider, *, trace: RunTrace | None = None):
     tracker = trace if trace is not None else RunTrace()
 
     def interpret(state):
-        with tracker.step("interpret"):
+        with tracker.step("interpret", provider=provider):
             return interpret_step(state)
 
     def interpret_step(state):
@@ -32,7 +32,7 @@ def build_reading_graph(provider, *, trace: RunTrace | None = None):
         return {"answer": answer, "corrections": state.get("corrections", -1) + 1}
 
     def review(state):
-        with tracker.step("review"):
+        with tracker.step("review", provider=provider):
             return review_step(state)
 
     def review_step(state):
