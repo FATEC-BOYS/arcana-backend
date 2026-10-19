@@ -87,3 +87,20 @@ A limpeza operacional é manual/agendável via scripts.maintenance: sessões/res
 expirados, outbox antiga, rate buckets antigos, cotas com mais de 90 dias e eventos com
 mais de 30 dias. Leituras, mensagens, mapas, execuções e diário permanecem até exclusão
 pelo proprietário. SSE não promete replay além da retenção; GET é a fonte do resultado.
+
+## Telemetria de agentes e avaliação (migração 0005)
+
+Cada execução de geração guarda, em generation_runs.trace (JSON), apenas etapas
+`retrieval`, `interpret`, `review`, `reject`, status, duração e decisão booleana
+do revisor. A sequência identifica correções sem armazenar o feedback. Não persistimos
+perguntas, prompts, texto das fontes, respostas ou IDs pessoais no trace. Execuções
+anteriores recebem o objeto vazio. A coluna pertence a generation_runs e é excluída
+com a leitura/conta pelo encadeamento de FKs. Cabeçalhos, textos completos e traces
+de bibliotecas externas não devem ser enviados a serviços de observabilidade sem
+avaliação de privacidade.
+
+`python -m scripts.observability --days 7` agrega sucesso, latências, erros,
+tokens, revisão e tempos por etapa. Não é uma API pública, não há dashboard remoto.
+O relatório conta tentativas de geração, não pessoas nem leituras únicas.
+`python -m scripts.evaluate --live` usa casos sintéticos para checks de
+grounding/menção/negação simples; resultados semânticos requerem avaliadores humanos.
