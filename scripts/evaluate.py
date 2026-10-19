@@ -83,7 +83,7 @@ def evaluate(db, *, live=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--live", action="store_true", help="Calls configured OpenAI model: up to 12 chat calls"
+        "--live", action="store_true", help="Calls configured OpenAI model: up to 20 chat calls"
     )
     args = parser.parse_args()
     with Session(get_engine()) as db:
