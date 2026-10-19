@@ -9,6 +9,8 @@
 - [x] Infraestrutura Docker e testes locais com doubles de IA
 - [ ] Validar chamadas reais com chave do provedor (não fornecida)
 - [ ] Curadoria aprofundada do acervo; conteúdo atual é introdutório
+- [x] Avaliação automatizada estrutural com testes de correção e rejeição do LangGraph
+- [x] Observabilidade operacional por etapa e relatório agregado sem conteúdo privado
 - [ ] Avaliação humana e benchmark com modelos reais
 - [x] SVG do mapa e horário desconhecido com limitações explícitas
 - [x] Cotas duráveis, retry de mensagens e proveniência de embeddings
