@@ -3,7 +3,6 @@ import json
 from langgraph.graph import END, START, StateGraph
 
 from app.ai.observability import RunTrace
-
 from app.ai.prompts.templates import INTERPRETER, REVIEWER
 from app.ai.schemas.state import Interpretation, ReadingState, Review
 from app.rag.citations import validate_citations
@@ -15,6 +14,7 @@ class InvalidGeneration(RuntimeError):
 
 def build_reading_graph(provider, *, trace: RunTrace | None = None):
     tracker = trace if trace is not None else RunTrace()
+
     def interpret(state):
         with tracker.step("interpret"):
             return interpret_step(state)
