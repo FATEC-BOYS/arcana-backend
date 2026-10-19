@@ -110,23 +110,23 @@ def process_one(provider_factory=OpenAIProvider) -> bool:
                     ]
                     tags += ["aspect-" + a["aspect"] for a in chart_data.get("aspects", [])]
                     fact_ids += list(chart_data.get("houses", {}))
-            embedded = db.scalar(
-                select(Chunk.id)
-                .join(KnowledgeDocument)
-                .where(
-                    KnowledgeDocument.topic == row.kind,
-                    KnowledgeDocument.active.is_(True),
-                    Chunk.embedding.is_not(None),
-                    Chunk.embedding_model == get_settings().embedding_model,
+            with trace.step("retrieval", provider=provider):
+                embedded = db.scalar(
+                    select(Chunk.id)
+                    .join(KnowledgeDocument)
+                    .where(
+                        KnowledgeDocument.topic == row.kind,
+                        KnowledgeDocument.active.is_(True),
+                        Chunk.embedding.is_not(None),
+                        Chunk.embedding_model == get_settings().embedding_model,
+                    )
+                    .limit(1)
                 )
-                .limit(1)
-            )
-            vector = (
-                provider.embed(question)
-                if embedded and db.bind.dialect.name == "postgresql"
-                else None
-            )
-            with trace.step("retrieval"):
+                vector = (
+                    provider.embed(question)
+                    if embedded and db.bind.dialect.name == "postgresql"
+                    else None
+                )
                 retrieval = retrieve(
                     db,
                     topic=row.kind,
