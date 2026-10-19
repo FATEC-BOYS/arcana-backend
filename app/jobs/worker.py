@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.ai.observability import RunTrace
 from app.ai.orchestration.graph import InvalidGeneration, build_reading_graph
 from app.ai.prompts.templates import PROMPT_VERSION
 from app.ai.providers.openai_provider import OpenAIProvider, ProviderFailure, ProviderUnavailable
@@ -82,6 +83,7 @@ def process_one(provider_factory=OpenAIProvider) -> bool:
         return False
     job_id, lease_token = claimed
     started, provider, sources = time.monotonic(), None, []
+    trace = RunTrace()
     result, error, retryable, retrieval_mode = None, None, False, "metadata"
     try:
         provider = provider_factory()
@@ -124,13 +126,14 @@ def process_one(provider_factory=OpenAIProvider) -> bool:
                 if embedded and db.bind.dialect.name == "postgresql"
                 else None
             )
-            retrieval = retrieve(
-                db,
-                topic=row.kind,
-                tags=tags,
-                vector=vector,
-                embedding_model=get_settings().embedding_model,
-            )
+            with trace.step("retrieval"):
+                retrieval = retrieve(
+                    db,
+                    topic=row.kind,
+                    tags=tags,
+                    vector=vector,
+                    embedding_model=get_settings().embedding_model,
+                )
             retrieval_mode = retrieval.mode
             if not retrieval.evidence:
                 raise ProviderUnavailable("knowledge_not_seeded")
@@ -170,7 +173,7 @@ def process_one(provider_factory=OpenAIProvider) -> bool:
             }
         while len(json.dumps(payload)) > get_settings().max_context_chars and payload["history"]:
             payload["history"].pop(0)
-        state = build_reading_graph(provider).invoke({"payload": payload, "corrections": -1})
+        state = build_reading_graph(provider, trace=trace).invoke({"payload": payload, "corrections": -1})
         result = {
             **state["answer"],
             "sources": sources,
@@ -234,6 +237,7 @@ def process_one(provider_factory=OpenAIProvider) -> bool:
                 calls=getattr(provider, "calls", 0),
                 retrieval_mode=retrieval_mode,
                 duration_ms=(time.monotonic() - started) * 1000,
+                trace=trace.as_dict(),
             )
         )
         db.commit()
