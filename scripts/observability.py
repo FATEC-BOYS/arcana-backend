@@ -109,8 +109,7 @@ def report(db, *, days=7, now_ts=None):
         "daily": {date: dict(counts) for date, counts in sorted(by_day.items())},
         "errors": dict(sorted(errors.items())),
         "note": (
-            "Attempts, not distinct users or readings. Metadata only: "
-            "no questions, answers, prompts, source text or personal IDs."
+            "Counts attempts, not distinct readings. Sensitive content and identifiers excluded."
         ),
     }
 
