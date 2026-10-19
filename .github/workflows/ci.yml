@@ -30,9 +30,16 @@ jobs:
       - run: python -m scripts.bootstrap
         env:
           DATABASE_URL: postgresql+psycopg://arcana:arcana@localhost:5432/arcana_test
-      - run: python -m scripts.evaluate
+      - run: python -m scripts.evaluate --output /tmp/arcana-offline-report.json
         env:
           DATABASE_URL: postgresql+psycopg://arcana:arcana@localhost:5432/arcana_test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arcana-synthetic-evaluation
+          path: /tmp/arcana-offline-report.json
+          if-no-files-found: ignore
+          retention-days: 14
       - run: python -m pytest -q
         env:
           TEST_DATABASE_URL: postgresql+psycopg://arcana:arcana@localhost:5432/arcana_test

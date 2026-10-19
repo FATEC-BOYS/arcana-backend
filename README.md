@@ -21,7 +21,7 @@ Versão 0.3.0 — escopo V1 implementado; homologação externa depende da confi
 - Acervo introdutório original, ingestão CLI e embeddings opcionais em pgvector.
 - Histórico técnico de modelo/prompt, tokens, chamadas e duração, sem conteúdo nos logs.
 - Telemetria LangGraph por etapa (tempo/status/revisões) e relatório operacional agregado, sem dados pessoais.
-- Testes offline de revisão/correção e rubricagem de cinco casos sintéticos (live opcional).
+- Testes offline de revisão/correção, benchmark de 57 casos sintéticos (tarot + astrologia), juiz LLM opcional, regressões e orçamento de API explícito.
 
 ## Executar com Docker
 
@@ -103,7 +103,7 @@ consomem cota; retentativas automáticas respeitam MAX_JOB_ATTEMPTS e usam backo
 
 ```bash
 python -m scripts.doctor
-python -m scripts.evaluate
+python -m scripts.evaluate --output /tmp/arcana-offline.json
 python -m scripts.observability --days 7
 python -m scripts.maintenance
 # Aplica a limpeza, após revisar o dry run:
@@ -112,10 +112,11 @@ python -m scripts.openapi
 ```
 
 Doctor não chama o provedor: configuração presente não comprova credencial válida.
-Evaluate padrão verifica recuperação em cinco casos sintéticos; `--live` faz até 20
-chamadas pagas de chat e aplica heurísticas de qualidade (não substitui revisão humana).
-Observability resume duração p95, taxas de sucesso, tokens, erros e etapas do grafo sem
-identificadores ou conteúdo dos usuários; consulte [evaluations](evaluations/README.md). Contratos HTTP do SDK usam transporte mockado nos testes.
+Evaluate padrão verifica 57 casos sintéticos, gratuitos; `--live` exige limites explícitos
+`--max-cases N --max-calls 4*N`. `--judge` é opcional, exige 5 chamadas por caso e
+não substitui revisão humana. Observability resume duração p50/p95/p99, taxas de sucesso,
+tokens por agente, erros e SLOs sem conteúdo dos usuários;
+consulte [evaluations](evaluations/README.md). Contratos HTTP do SDK usam transporte mockado nos testes.
 Embeddings antigos sem identificação do modelo são preservados e ignorados na similaridade;
 execute `scripts.manage embed` para reindexar com o modelo configurado. O seed v2 contém
 215 trechos introdutórios autorais, mantendo referências das versões anteriores.

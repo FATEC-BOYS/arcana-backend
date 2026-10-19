@@ -104,3 +104,23 @@ tokens, revisão e tempos por etapa. Não é uma API pública, não há dashboar
 O relatório conta tentativas de geração, não pessoas nem leituras únicas.
 `python -m scripts.evaluate --live` usa casos sintéticos para checks de
 grounding/menção/negação simples; resultados semânticos requerem avaliadores humanos.
+
+## Avaliação e controles de qualidade v2
+
+As suítes `evaluations/datasets/tarot.json` e `astrology.json` contêm somente
+fixtures sintéticas. O CI testa cobertura de fontes, schema e regressões
+determinísticas; **não** atesta segurança semântica de modelos reais.
+O benchmark pago requer limite de casos e teto de chamadas antes de iniciar.
+Até quatro chamadas de interpretação/revisão e uma chamada opcional de juiz
+LLM por caso. `--baseline` exige hashes iguais do dataset e IDs idênticos;
+qualquer aprovação antiga que vire falha é reportada como regressão.
+
+O juiz LLM retorna apenas notas de 0 a 4 e enumerações de falhas; não registra
+o texto de saída no relatório. Ele recebe perguntas e contextos exclusivamente
+sintéticos e **não** é usado no caminho de produção. Avaliação humana por
+duas pessoas independentes continua obrigatória para afirmar qualidade real.
+
+Por nó LangGraph o trace inclui deltas de chamadas e tokens de entrada/saída,
+além de tempo e status, sem modelo de conteúdo. O relatório operacional
+inclui p50/p95/p99, agregados por dia/modelo e SLO com amostra mínima.
+SLO sem dados retorna `insufficient_data`, e não afirma saúde do sistema.
