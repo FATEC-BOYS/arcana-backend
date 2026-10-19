@@ -9,9 +9,10 @@
 - [x] Infraestrutura Docker e testes locais com doubles de IA
 - [ ] Validar chamadas reais com chave do provedor (não fornecida)
 - [ ] Curadoria aprofundada do acervo; conteúdo atual é introdutório
-- [x] Avaliação automatizada estrutural com testes de correção e rejeição do LangGraph
-- [x] Observabilidade operacional por etapa e relatório agregado sem conteúdo privado
-- [ ] Avaliação humana e benchmark com modelos reais
+- [x] Avaliação estrutural com 57 casos sintéticos de tarot/astrologia, testes de revisão e rejeição
+- [x] Juiz LLM opcional, baseline por checksum, teto de chamadas pagas e gates de SLO
+- [x] Observabilidade de tokens por agente, latência, status, SLOs e agregados sem conteúdo privado
+- [ ] Executar benchmark com modelos reais, calibrar juiz e fazer avaliação humana independente
 - [x] SVG do mapa e horário desconhecido com limitações explícitas
 - [x] Cotas duráveis, retry de mensagens e proveniência de embeddings
 - [x] Diagnóstico, limpeza operacional, OpenAPI exportado e avaliação sintética
