@@ -3,6 +3,7 @@ import json
 import pytest
 from sqlalchemy.orm import Session
 
+from app.ai.judge import JudgeScore
 from app.ai.schemas.state import Interpretation, Review
 from app.db.session import get_engine
 from scripts.evaluate import (
@@ -11,7 +12,9 @@ from scripts.evaluate import (
     EvaluationConfigError,
     compare_reports,
     evaluate,
+    load_astrology_cases,
     load_cases,
+    select_suites,
 )
 
 
@@ -147,3 +150,60 @@ def test_reviewer_cannot_approve_an_injected_phrase(client):
     case = next(x for x in result["cases"] if x["id"] == "injection")
     assert not case["passed"]
     assert case["quality_checks"]["injection_phrase_absent"] is False
+
+
+def test_astrology_suite_is_valid_and_source_grounded(client):
+    cases, checksum = load_astrology_cases()
+    assert len(cases) >= 12 and len(checksum) == 64
+    all_cases, all_checksum = select_suites("all")
+    assert len(all_cases) >= 55 and len(all_checksum) == 64
+    with Session(get_engine()) as db:
+        result = evaluate(db, suite="astrology")
+    assert result["summary"]["failed"] == 0
+    assert {case["suite"] for case in result["cases"]} == {"astrology"}
+
+
+def test_judge_requires_live_mode(client):
+    with Session(get_engine()) as db:
+        with pytest.raises(EvaluationConfigError, match="judge_requires_live_mode"):
+            evaluate(db, judge=True)
+
+
+def test_judge_schema_checks_five_axes_and_violation_flags():
+    good = JudgeScore(
+        fidelidade=4, seguranca=3, autonomia=4, utilidade=3,
+        resistencia_injecao=4, requer_revisao_humana=False, violacoes=[]
+    )
+    assert good.passed()
+    assert not good.model_copy(update={"requer_revisao_humana": True}).passed()
+    assert not good.model_copy(update={"fidelidade": 2}).passed()
+    assert not good.model_copy(update={"violacoes": ["fatalismo"]}).passed()
+
+
+def test_optional_model_judge_is_budgeted_and_no_explanations_leak(client):
+    class GoodJudge(CompliantProvider):
+        def structured(self, *, system, payload, schema):
+            assert schema is JudgeScore
+            self.calls += 1
+            self.input_tokens += 20
+            self.output_tokens += 10
+            return JudgeScore(
+                fidelidade=4, seguranca=4, autonomia=4, utilidade=4,
+                resistencia_injecao=4, requer_revisao_humana=False, violacoes=[]
+            )
+
+    with Session(get_engine()) as db:
+        result = evaluate(
+            db, live=True, case_limit=1, max_calls=5, judge=True,
+            provider_factory=CompliantProvider, judge_provider_factory=GoodJudge,
+        )
+    assert result["summary"]["calls"] == 3
+    assert result["summary"]["passed"] == 1
+    assert result["cases"][0]["judge"]["passed"] is True
+    assert result["judge_version"] and "resposta" not in json.dumps(result)
+
+
+def test_judge_refuses_insufficient_call_budget(client):
+    with Session(get_engine()) as db:
+        with pytest.raises(EvaluationConfigError, match="calls_budget"):
+            evaluate(db, live=True, case_limit=1, max_calls=4, judge=True)
