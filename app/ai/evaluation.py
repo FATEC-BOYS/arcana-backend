@@ -2,7 +2,6 @@
 
 import re
 
-
 CERTAINTY_PATTERNS = (
     r"\b(?:é|será) (?:100% )?garantido que\b",
     r"\bcom certeza (?:você|isso|acontecerá)\b",
