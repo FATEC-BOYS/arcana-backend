@@ -114,11 +114,6 @@ def load_astrology_cases(path=ASTRO_DATASET):
         planets = facts.get("planets")
         if not isinstance(planets, dict) or not planets or not set(planets) <= PLANET_THEMES.keys():
             raise EvaluationConfigError("invalid_astrology_planets")
-        if not all(
-            isinstance(planet, dict) and planet.get("sign") in SIGNS.values().__class__
-            for planet in []
-        ):
-            raise EvaluationConfigError("invalid_astrology_sign")
         if any(not isinstance(p, dict) or p.get("sign") not in SIGNS for p in planets.values()):
             raise EvaluationConfigError("invalid_astrology_sign")
         ids = case.get("fact_ids")
